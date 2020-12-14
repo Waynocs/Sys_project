@@ -6,16 +6,16 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "server.h"
+
 #define PORT 6000
 #define MAX_BUFFER 1000
 
 int ouvrirUneSocketAttente()
 {
-    int socketTemp;
-    int longueurAdresse;
-    struct sockaddr_in coordonneesServeur;
+    struct sockaddr_in coordonneesServeur = createCoordsServ(PORT);
 
-    socketTemp = socket(PF_INET, SOCK_STREAM, 0);
+    int socketTemp = socket(PF_INET, SOCK_STREAM, 0);
 
     if (socketTemp < 0)
     {
@@ -23,15 +23,8 @@ int ouvrirUneSocketAttente()
         exit(EXIT_FAILURE);
     }
 
-    // On prépare l’adresse d’attachement locale
-    longueurAdresse = sizeof(struct sockaddr_in);
-    memset(&coordonneesServeur, 0x00, longueurAdresse);
-
-    coordonneesServeur.sin_family = PF_INET;
     // toutes les interfaces locales disponibles
     coordonneesServeur.sin_addr.s_addr = htonl(INADDR_ANY);
-    // toutes les interfaces locales disponibles
-    coordonneesServeur.sin_port = htons(PORT);
 
     if (bind(socketTemp, (struct sockaddr *)&coordonneesServeur, sizeof(coordonneesServeur)) == -1)
     {

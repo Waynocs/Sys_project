@@ -7,32 +7,25 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "client.h"
+
 #define PORT 6000
 #define MAX_BUFFER 1000
 
 int ouvrirUneConnexionTcp()
 {
-    int socketTemp;
-    int longueurAdresse;
-    struct sockaddr_in coordonneesServeur;
+    struct sockaddr_in coordonneesServeur = createCoordsServ(PORT);
 
-    socketTemp = socket(AF_INET, SOCK_STREAM, 0);
+    int socketTemp = socket(AF_INET, SOCK_STREAM, 0);
 
     if (socket < 0)
     {
-        printf("socket incorrecte\n");
+        printf("socket incorrect\n");
         exit(EXIT_FAILURE);
     }
 
-    // On prépare les coordonnées du serveur
-    longueurAdresse = sizeof(struct sockaddr_in);
-    memset(&coordonneesServeur, 0x00, longueurAdresse);
-
-    coordonneesServeur.sin_family = PF_INET;
     // adresse du serveur
     inet_aton("127.0.0.1", &coordonneesServeur.sin_addr);
-    // toutes les interfaces locales disponibles
-    coordonneesServeur.sin_port = htons(PORT);
 
     if (connect(socketTemp, (struct sockaddr *)&coordonneesServeur, sizeof(coordonneesServeur)) == -1)
     {
