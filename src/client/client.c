@@ -7,27 +7,50 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "client.h"
-
 #define PORT 6000
 #define MAX_BUFFER 1000
 
-int ouvrirUneConnexionTcp()
+const char *EXIT = "exit";
+
+void readMessage(char tampon[])
 {
-    struct sockaddr_in coordonneesServeur = createCoordsServ(PORT);
+    printf("Saisir un message à envoyer :\n");
+    fgets(tampon, MAX_BUFFER, stdin);
+    strtok(tampon, "\n");
+}
 
-    int socketTemp = socket(AF_INET, SOCK_STREAM, 0);
+int testExit(char tampon[])
+{
+    return strcmp(tampon, EXIT) == 0;
+}
 
-    if (socket < 0)
+int main(int argc, char const *argv[])
+{
+    int fdSocket;
+    int nbReceived;
+    struct sockaddr_in serverCoor;
+    int addressLength;
+    char tampon[MAX_BUFFER];
+
+    fdSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (fdSocket < 0)
     {
-        printf("socket incorrect\n");
+        printf("socket incorrecte\n");
         exit(EXIT_FAILURE);
     }
 
-    // adresse du serveur
-    inet_aton("127.0.0.1", &coordonneesServeur.sin_addr);
+    // On prépare les coordonnées du serveur
+    addressLength = sizeof(struct sockaddr_in);
+    memset(&serverCoor, 0x00, addressLength);
 
-    if (connect(socketTemp, (struct sockaddr *)&coordonneesServeur, sizeof(coordonneesServeur)) == -1)
+    serverCoor.sin_family = PF_INET;
+    // adresse du serveur
+    inet_aton("127.0.0.1", &serverCoor.sin_addr);
+    // toutes les interfaces locales disponibles
+    serverCoor.sin_port = htons(PORT);
+
+    if (connect(fdSocket, (struct sockaddr *)&serverCoor, sizeof(serverCoor)) == -1)
     {
         printf("connexion impossible\n");
         exit(EXIT_FAILURE);
@@ -35,27 +58,32 @@ int ouvrirUneConnexionTcp()
 
     printf("connexion ok\n");
 
-    return socketTemp;
-}
-
-int main(int argc, char const *argv[])
-{
-    int fdSocket;
-    int nbRecu;
-    char tampon[MAX_BUFFER];
-
-    fdSocket = ouvrirUneConnexionTcp();
-
-    printf("Envoi du message au serveur.\n");
-    strcpy(tampon, "Message du client vers le serveur");
-    send(fdSocket, tampon, strlen(tampon), 0);
-
-    nbRecu = recv(fdSocket, tampon, MAX_BUFFER, 0); // on attend la réponse du serveur
-
-    if (nbRecu > 0)
+    while (1)
     {
-        tampon[nbRecu] = 0;
-        printf("Recu : %s\n", tampon);
+        readMessage(tampon);
+
+        if (testExit(tampon))
+        {
+            send(fdSocket, tampon, strlen(tampon), 0);
+            break; // on quitte la boucle
+        }
+
+        // on envoie le message au serveur
+        send(fdSocket, tampon, strlen(tampon), 0);
+
+        // on attend la réponse du serveur
+        nbReceived = recv(fdSocket, tampon, MAX_BUFFER, 0);
+
+        if (nbReceived > 0)
+        {
+            tampon[nbReceived] = 0;
+            printf("Recu : %s\n", tampon);
+
+            if (testExit(tampon))
+            {
+                break; // on quitte la boucle
+            }
+        }
     }
 
     close(fdSocket);

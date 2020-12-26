@@ -1,6 +1,6 @@
 all: client server
 
-client: obj/client.o ob/sockets.o
+client: obj/client.o obj/sockets.o
 ifneq ("$(wildcard bin)", "")
 	@echo "bin exists"
 else

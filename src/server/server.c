@@ -1,86 +1,139 @@
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
-
-#include "server.h"
 
 #define PORT 6000
 #define MAX_BUFFER 1000
+#define MAX_CLIENTS 100
 
-int ouvrirUneSocketAttente()
+const char *EXIT = "exit";
+
+void readMessage(char tampon[])
 {
-    struct sockaddr_in coordonneesServeur = createCoordsServ(PORT);
+    printf("Saisir un message à envoyer :\n");
+    fgets(tampon, MAX_BUFFER, stdin);
+    strtok(tampon, "\n");
+}
 
-    int socketTemp = socket(PF_INET, SOCK_STREAM, 0);
+int testExit(char tampon[])
+{
+    return strcmp(tampon, EXIT) == 0;
+}
 
-    if (socketTemp < 0)
+int main(int argc, char const *argv[])
+{
+    int fdWaitSocket;
+    int fdCommunicationSocket;
+    struct sockaddr_in serverCoor;
+    struct sockaddr_in appellantCoor;
+    char tampon[MAX_BUFFER];
+    int NbRnbReceived;
+    int addressLenght;
+    int pid;
+
+    fdWaitSocket = socket(PF_INET, SOCK_STREAM, 0);
+
+    if (fdWaitSocket < 0)
     {
         printf("socket incorrecte\n");
         exit(EXIT_FAILURE);
     }
 
-    // toutes les interfaces locales disponibles
-    coordonneesServeur.sin_addr.s_addr = htonl(INADDR_ANY);
+    // On prépare l’adresse d’attachement locale
+    addressLenght = sizeof(struct sockaddr_in);
+    memset(&serverCoor, 0x00, addressLenght);
 
-    if (bind(socketTemp, (struct sockaddr *)&coordonneesServeur, sizeof(coordonneesServeur)) == -1)
+    serverCoor.sin_family = PF_INET;
+    // toutes les interfaces locales disponibles
+    serverCoor.sin_addr.s_addr = htonl(INADDR_ANY);
+    // toutes les interfaces locales disponibles
+    serverCoor.sin_port = htons(PORT);
+
+    if (bind(fdWaitSocket, (struct sockaddr *)&serverCoor, sizeof(serverCoor)) == -1)
     {
         printf("erreur de bind\n");
         exit(EXIT_FAILURE);
     }
 
-    if (listen(socketTemp, 5) == -1)
+    if (listen(fdWaitSocket, 5) == -1)
     {
         printf("erreur de listen\n");
         exit(EXIT_FAILURE);
     }
 
-    printf("En attente de connexion...\n");
+    socklen_t coorSize = sizeof(appellantCoor);
 
-    return socketTemp;
-}
+    int nbCustomers = 0;
 
-int main(int argc, char const *argv[])
-{
-    int fdSocketAttente;
-    int fdSocketCommunication;
-    struct sockaddr_in coordonneesAppelant;
-    char tampon[MAX_BUFFER];
-    int nbRecu;
-
-    fdSocketAttente = ouvrirUneSocketAttente();
-
-    socklen_t tailleCoord = sizeof(coordonneesAppelant);
-
-    if ((fdSocketCommunication = accept(fdSocketAttente, (struct sockaddr *)&coordonneesAppelant,
-                                        &tailleCoord)) == -1)
+    while (nbCustomers < MAX_CLIENTS)
     {
-        printf("erreur de accept\n");
-        exit(-1);
+        if ((fdCommunicationSocket = accept(fdWaitSocket, (struct sockaddr *)&appellantCoor,
+                                            &coorSize)) == -1)
+        {
+            printf("erreur de accept\n");
+            exit(EXIT_FAILURE);
+        }
+
+        printf("Client connecté - %s:%d\n",
+               inet_ntoa(appellantCoor.sin_addr),
+               ntohs(appellantCoor.sin_port));
+
+        if ((pid = fork()) == 0)
+        {
+            close(fdWaitSocket);
+
+            while (1)
+            {
+                // on attend le message du client
+                // la fonction recv est bloquante
+                NbRnbReceived = recv(fdCommunicationSocket, tampon, MAX_BUFFER, 0);
+
+                if (NbRnbReceived > 0)
+                {
+                    tampon[NbRnbReceived] = 0;
+                    printf("Recu de %s:%d : %s\n",
+                           inet_ntoa(appellantCoor.sin_addr),
+                           ntohs(appellantCoor.sin_port),
+                           tampon);
+
+                    if (testExit(tampon))
+                    {
+                        break; // on quitte la boucle
+                    }
+                }
+
+                readMessage(tampon);
+
+                if (testExit(tampon))
+                {
+                    send(fdCommunicationSocket, tampon, strlen(tampon), 0);
+                    break; // on quitte la boucle
+                }
+
+                // on envoie le message au client
+                send(fdCommunicationSocket, tampon, strlen(tampon), 0);
+            }
+
+            exit(EXIT_SUCCESS);
+        }
+
+        nbCustomers++;
     }
 
-    printf("Client connecté\n");
+    close(fdCommunicationSocket);
+    close(fdWaitSocket);
 
-    // on attend le message du client
-    // la fonction recv est bloquante
-    nbRecu = recv(fdSocketCommunication, tampon, MAX_BUFFER, 0);
-
-    if (nbRecu > 0)
+    for (int i = 0; i < MAX_CLIENTS; i++)
     {
-        tampon[nbRecu] = 0;
-        printf("Recu : %s\n", tampon);
+        wait(NULL);
     }
 
-    printf("Envoi du message au client.\n");
-    strcpy(tampon, "Message renvoyé par le serveur vers le client !");
-    // on envoie le message au client
-    send(fdSocketCommunication, tampon, strlen(tampon), 0);
-
-    close(fdSocketCommunication);
-    close(fdSocketAttente);
-
+    printf("Fin du programme.\n");
     return EXIT_SUCCESS;
 }
