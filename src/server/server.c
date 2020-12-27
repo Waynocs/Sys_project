@@ -7,10 +7,20 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #define PORT 6000
 #define MAX_BUFFER 1000
 #define MAX_CLIENTS 100
+#define NB 10
+
+typedef struct
+{
+    int tableau[NB];
+} Variables;
+
+void initialiserTableau(int tab[]);
+void *afficherTableau(void *arg);
 
 const char *EXIT = "exit";
 
@@ -28,6 +38,7 @@ int testExit(char tampon[])
 
 int main(int argc, char const *argv[])
 {
+    pthread_t monThread;
     int fdWaitSocket;
     int fdCommunicationSocket;
     struct sockaddr_in serverCoor;
@@ -35,7 +46,21 @@ int main(int argc, char const *argv[])
     char tampon[MAX_BUFFER];
     int NbRnbReceived;
     int addressLenght;
-    int pid;
+    Variables donnees;
+
+    printf("Initialisation du tableau\n");
+    initialiserTableau(donnees.tableau);
+
+    if (pthread_create(&monThread, NULL, afficherTableau, &donnees) != 0)
+    {
+        printf("erreur de creation de thread\n");
+        return EXIT_FAILURE;
+    }
+
+    printf("Creation du thread -> ok\n");
+    pthread_join(monThread, NULL);
+
+    return EXIT_SUCCESS;
 
     fdWaitSocket = socket(PF_INET, SOCK_STREAM, 0);
 
@@ -84,45 +109,6 @@ int main(int argc, char const *argv[])
                inet_ntoa(appellantCoor.sin_addr),
                ntohs(appellantCoor.sin_port));
 
-        if ((pid = fork()) == 0)
-        {
-            close(fdWaitSocket);
-
-            while (1)
-            {
-                // on attend le message du client
-                // la fonction recv est bloquante
-                NbRnbReceived = recv(fdCommunicationSocket, tampon, MAX_BUFFER, 0);
-
-                if (NbRnbReceived > 0)
-                {
-                    tampon[NbRnbReceived] = 0;
-                    printf("Recu de %s:%d : %s\n",
-                           inet_ntoa(appellantCoor.sin_addr),
-                           ntohs(appellantCoor.sin_port),
-                           tampon);
-
-                    if (testExit(tampon))
-                    {
-                        break; // on quitte la boucle
-                    }
-                }
-
-                readMessage(tampon);
-
-                if (testExit(tampon))
-                {
-                    send(fdCommunicationSocket, tampon, strlen(tampon), 0);
-                    break; // on quitte la boucle
-                }
-
-                // on envoie le message au client
-                send(fdCommunicationSocket, tampon, strlen(tampon), 0);
-            }
-
-            exit(EXIT_SUCCESS);
-        }
-
         nbCustomers++;
     }
 
@@ -136,4 +122,25 @@ int main(int argc, char const *argv[])
 
     printf("Fin du programme.\n");
     return EXIT_SUCCESS;
+}
+
+void initialiserTableau(int tab[])
+{
+    for (int i = 0; i < NB; i++)
+    {
+        tab[i] = i * i;
+    }
+}
+
+void *afficherTableau(void *arg)
+{
+    Variables *structure = (Variables *)arg;
+    printf("Je suis un thread et voici les valeurs de tableau :\n");
+
+    for (int i = 0; i < NB; i++)
+    {
+        printf("%d\n", structure->tableau[i]);
+    }
+
+    pthread_exit(NULL);
 }
