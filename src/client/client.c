@@ -1,92 +1,98 @@
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <sys/socket.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <errno.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
 
-#define PORT 6000
-#define MAX_BUFFER 1000
+#include "../common/sockets.h"
+#include "client.h"
 
-const char *EXIT = "exit";
-
-void readMessage(char tampon[])
+void readMessage(char *tampon[])
 {
-    printf("Saisir un message à envoyer :\n");
-    fgets(tampon, MAX_BUFFER, stdin);
+    //printf("Saisir un message à envoyer :\n");
+    fgets(tampon, BUFFER_LEN, stdin);
     strtok(tampon, "\n");
-}
-
-int testExit(char tampon[])
-{
-    return strcmp(tampon, EXIT) == 0;
 }
 
 int main(int argc, char const *argv[])
 {
-    int fdSocket;
-    int nbReceived;
-    struct sockaddr_in serverCoor;
-    int addressLength;
-    char tampon[MAX_BUFFER];
+    // Structure contenant l'adresse
+    struct sockaddr_in adresse;
+    initAdresse(&adresse);
+    // Descripteur de la socket du serveur
+    int clientSocket = initClientSocket(&adresse);
 
-    fdSocket = socket(AF_INET, SOCK_STREAM, 0);
+    static char buffer[BUFFER_LEN + 1];
 
-    if (fdSocket < 0)
+    int isClosed = manageServer(clientSocket);
+    while ((isClosed = manageServer(clientSocket)) == 0)
     {
-        printf("socket incorrecte\n");
-        exit(EXIT_FAILURE);
+        readMessage(buffer);
+        send(clientSocket, buffer, strlen(buffer), MSG_DONTWAIT);
     }
-
-    // On prépare les coordonnées du serveur
-    addressLength = sizeof(struct sockaddr_in);
-    memset(&serverCoor, 0x00, addressLength);
-
-    serverCoor.sin_family = PF_INET;
-    // adresse du serveur
-    inet_aton("127.0.0.1", &serverCoor.sin_addr);
-    // toutes les interfaces locales disponibles
-    serverCoor.sin_port = htons(PORT);
-
-    if (connect(fdSocket, (struct sockaddr *)&serverCoor, sizeof(serverCoor)) == -1)
-    {
-        printf("connexion impossible\n");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("connexion ok\n");
-
-    while (1)
-    {
-        readMessage(tampon);
-
-        if (testExit(tampon))
-        {
-            send(fdSocket, tampon, strlen(tampon), 0);
-            break; // on quitte la boucle
-        }
-
-        // on envoie le message au serveur
-        send(fdSocket, tampon, strlen(tampon), 0);
-
-        // on attend la réponse du serveur
-        nbReceived = recv(fdSocket, tampon, MAX_BUFFER, 0);
-
-        if (nbReceived > 0)
-        {
-            tampon[nbReceived] = 0;
-            printf("Recu : %s\n", tampon);
-
-            if (testExit(tampon))
-            {
-                break; // on quitte la boucle
-            }
-        }
-    }
-
-    close(fdSocket);
 
     return EXIT_SUCCESS;
+}
+
+// Initialisation de la structure sockaddr_in
+void initAdresse(struct sockaddr_in *adresse)
+{
+    (*adresse).sin_family = AF_INET;
+    inet_aton("127.0.0.1", &adresse->sin_addr);
+    (*adresse).sin_port = htons(PORT);
+}
+
+// Démarrage de la socket client
+int initClientSocket(struct sockaddr_in *adresse)
+{
+    int fdsocket = initSocket(&adresse);
+
+    // Connexion de la socket sur le port et l'adresse IP
+    printf("Connexion de la socket sur le port %i\n", PORT);
+    if (connect(fdsocket, (struct sockaddr *)adresse, sizeof(*adresse)) != 0)
+    {
+        printf("Echec de connexion: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    return fdsocket;
+}
+
+int manageServer(int clientSocket)
+{
+    static char buffer[BUFFER_LEN + 1];
+
+    int len = recv(clientSocket, buffer, BUFFER_LEN, MSG_DONTWAIT);
+    // Booléen pour suivre l'état de la socket
+    int isClosed = 0;
+    if (len == -1 && errno != EAGAIN)
+    {
+        // Une erreur est survenue
+        printf("Errno [%i] : %s\n", errno, strerror(errno));
+        isClosed = 1;
+    }
+    else if (len == 0)
+    {
+        // Le serveur s'est déconnecté (extrémité de la socket fermée)
+        isClosed = 1;
+    }
+    else if (len > 0)
+    {
+        system("clear");
+        printf("%s\n", buffer);
+        memset(buffer, 0, sizeof(buffer));
+    }
+
+    if (isClosed == 1)
+    {
+        // La socket est fermé ou le client veut quitter le serveur !
+        printf("Fermeture de la connexion avec le serveur\n");
+        // Fermeture de la socket
+        close(clientSocket);
+    }
+    return isClosed;
 }

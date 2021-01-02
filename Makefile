@@ -18,7 +18,8 @@ endif
 	gcc -o obj/client.o -c src/client/client.c
 
 server: obj/server.o obj/sockets.o
-	gcc -o bin/server obj/server.o obj/sockets.o -pthread
+	gcc -o bin/server obj/server.o obj/sockets.o
+	rm -r obj
 
 obj/server.o: src/server/server.c
 	gcc -o obj/server.o -c src/server/server.c
