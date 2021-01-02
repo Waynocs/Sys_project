@@ -9,6 +9,7 @@
 #include <fcntl.h>
 
 #include "../common/sockets.h"
+#include "../common/sleep.h"
 #include "client.h"
 
 void readMessage(char *tampon[])
@@ -28,11 +29,13 @@ int main(int argc, char const *argv[])
 
     static char buffer[BUFFER_LEN + 1];
 
-    int isClosed = manageServer(clientSocket);
+    int isClosed;
+    msleep(10);
     while ((isClosed = manageServer(clientSocket)) == 0)
     {
         readMessage(buffer);
         send(clientSocket, buffer, strlen(buffer), MSG_DONTWAIT);
+        msleep(10);
     }
 
     return EXIT_SUCCESS;
@@ -62,6 +65,7 @@ int initClientSocket(struct sockaddr_in *adresse)
     return fdsocket;
 }
 
+// Lecture de la réponse
 int manageServer(int clientSocket)
 {
     static char buffer[BUFFER_LEN + 1];

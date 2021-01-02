@@ -1,12 +1,12 @@
 all: client server
 
-client: obj/client.o obj/sockets.o
+client: obj/client.o obj/sockets.o obj/sleep.o
 ifneq ("$(wildcard bin)", "")
 	@echo "bin exists"
 else
 	mkdir bin
 endif
-	gcc -o bin/client obj/client.o obj/sockets.o
+	gcc -o bin/client obj/client.o obj/sockets.o obj/sleep.o
 
 
 obj/client.o: src/client/client.c
@@ -27,3 +27,6 @@ obj/server.o: src/server/server.c
 
 obj/sockets.o: src/common/sockets.c
 	gcc -o obj/sockets.o -c src/common/sockets.c
+
+obj/sleep.o: src/common/sleep.c
+	gcc -o obj/sleep.o -c src/common/sleep.c
