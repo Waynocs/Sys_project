@@ -161,23 +161,8 @@ void manageClient(int clients[])
         {
             // Ajout du terminateur de chaîne
             buffer[len] = '\0';
-            if (strncmp(buffer, EXIT_WORD, 4) == 0)
-            {
-                // Le client veut se déconnecter
-                send(clientSocket, "Bye\n", strlen("Bye\n"), 0);
-                isClosed = 1;
-            }
-            else
-            {
-                // On renvoie le texte au client dans un buffer assez grand
-                printf("Client %d dit : %s\n", i, buffer);
-                int len = strlen("Vous avez dit : ") + strlen(buffer) + 1;
-                char response[len];
-                strcpy(response, "Vous avez dit : ");
-                strcat(response, buffer);
-                // Un seul envoie permet de ne pas surcharger le réseau
-                send(clientSocket, response, strlen(response), 0);
-            }
+            printf("Client %d dit : %s\n", i, buffer);
+            manageCommands(clientSocket, buffer);
         }
 
         if (isClosed == 1)
@@ -190,4 +175,36 @@ void manageClient(int clients[])
             clients[i] = -1;
         }
     }
+}
+
+void manageCommands(int clientSocket, char *buffer)
+{
+    char *response = NULL;
+    if (strncmp(buffer, EXIT_WORD, 4) == 0)
+    {
+        // Le client veut se déconnecter
+        send(clientSocket, "Bye\n", strlen("Bye\n"), 0);
+        // La socket est fermé ou le client veut quitter le serveur !
+        printf("Fermeture de la connexion avec le client\n");
+        // Fermeture de la socket
+        close(clientSocket);
+        return;
+    }
+    else if (strncmp(buffer, "command1", strlen("command1")) == 0)
+    {
+        int len = strlen("Ok donc là je dois faire un truc ?");
+        response = malloc(len * sizeof(char));
+        strcpy(response, "Ok donc là je dois faire un truc ?");
+    }
+    else
+    {
+        // On renvoie le texte au client dans un buffer assez grand
+        int len = strlen("Vous avez dit : ") + strlen(buffer) + 1;
+        response = malloc(len * sizeof(char));
+        strcpy(response, "Vous avez dit : ");
+        strcat(response, buffer);
+    }
+    // Un seul envoie permet de ne pas surcharger le réseau
+    send(clientSocket, response, strlen(response), 0);
+    free(response);
 }
