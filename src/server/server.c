@@ -190,11 +190,23 @@ void manageCommands(int clientSocket, char *buffer)
         close(clientSocket);
         return;
     }
-    else if (strncmp(buffer, "command1", strlen("command1")) == 0)
+    else if (strncmp(buffer, "seeplaces", strlen("seeplaces")) == 0)
     {
-        int len = strlen("Ok donc là je dois faire un truc ?");
+        int len = strlen("Nombres de places disponibles : TODO");
         response = malloc(len * sizeof(char));
-        strcpy(response, "Ok donc là je dois faire un truc ?");
+        strcpy(response, "Nombres de places disponibles : TODO");
+    }
+    else if (strncmp(buffer, "getplaces", strlen("getplaces")) == 0)
+    {
+        int len = strlen("Votre nom ? TODO");
+        response = malloc(len * sizeof(char));
+        strcpy(response, "Votre nom ? TODO");
+    }
+    else if (strncmp(buffer, "cancel", strlen("cancel")) == 0)
+    {
+        int len = strlen("Votre no de doss ? TODO");
+        response = malloc(len * sizeof(char));
+        strcpy(response, "Votre no de doss ? TODO");
     }
     else
     {
