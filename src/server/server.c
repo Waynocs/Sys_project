@@ -25,6 +25,7 @@ int isRunning = 1;
 
 void exitHandler(int dummy)
 {
+    //TODO: double free or corruption (!prev)
     isRunning = 0;
     for (int i = 0; i < NB_MAX_SALLE; i++)
     {
@@ -71,7 +72,7 @@ int main(void)
         // Descripteur de la socket du client, on attend une connexion
         if ((clientSocket = waitForClient(&serverSocket)) != -1)
         {
-            printf("Attribution de l'identifiant\n");
+            printf("[INFO - SERVER] Attribution de l'identifiant\n");
             for (int i = 0; i < NB_CLIENTS; i++)
             {
                 if (clients[i].id == -1)
@@ -86,7 +87,7 @@ int main(void)
                     thrd_t thread;
                     if (thrd_create(&thread, clientMain, &(clients[i])) != thrd_success)
                     {
-                        printf("[Client %d] Error thread\n", clients[i].id);
+                        printf("[ERRO - CLIENT %d] Error thread\n", clients[i].id);
                     }
 
                     isEmptyPlace = 1;
@@ -95,7 +96,7 @@ int main(void)
             }
             if (!isEmptyPlace)
             {
-                printf("Plus de place");
+                printf("[INFO - SERVER] Plus de place");
             }
         }
     }
@@ -104,8 +105,8 @@ int main(void)
 
 int clientMain(struct Client *client)
 {
-    printf("[Client %d] Création du thread\n", client->id);
-    send(client->socket, "Entrez 'exit' pour quitter\n", strlen("Entrez 'exit' pour quitter\n"), MSG_DONTWAIT);
+    printf("[INFO - CLIENT %d] Création du thread\n", client->id);
+    send(client->socket, "ready", strlen("ready"), MSG_DONTWAIT);
 
     int isClosed = 0;
 
@@ -114,7 +115,7 @@ int clientMain(struct Client *client)
         isClosed = manageClient(client);
     }
 
-    printf("[Client %d] Fin du thread\n", client->id);
+    printf("[INFO - CLIENT %d] Fin du thread\n", client->id);
     clients[client->id].id = -1;
     return thrd_success;
 }
@@ -133,7 +134,7 @@ int manageClient(struct Client *client)
     if (len == -1 && errno != EAGAIN)
     {
         // Une erreur est survenue
-        printf("[Client %d] Errno {%i} : %s\n", client->id, errno, strerror(errno));
+        printf("[ERRO - CLIENT %d] Errno {%i} : %s\n", client->id, errno, strerror(errno));
         isClosed = 1;
     }
     else if (len == 0)
@@ -145,14 +146,14 @@ int manageClient(struct Client *client)
     {
         // Ajout du terminateur de chaîne
         buffer[len] = '\0';
-        printf("[INFO - Client %d] < %s\n", client->id, buffer);
+        printf("[INFO - CLIENT %d] Commande : %s\n", client->id, buffer);
         manageCommands(client, buffer);
     }
 
     if (isClosed == 1)
     {
         // La socket est fermé ou le client veut quitter le serveur !
-        printf("[Client %d] Fermeture de la connexion\n", client->id);
+        printf("[INFO - CLIENT %d] Fermeture de la connexion\n", client->id);
         // Fermeture de la socket
         close(client->socket);
     }
@@ -168,9 +169,9 @@ void manageCommands(struct Client *client, char *buffer)
     if (strncmp(buffer, EXIT_WORD, 4) == 0)
     {
         // Le client veut se déconnecter
-        send(client->socket, "Bye\0", strlen("Bye\0"), 0);
+        send(client->socket, "bye\0", strlen("bye\0"), 0);
         // La socket est fermé ou le client veut quitter le serveur !
-        printf("[Client %d] Fermeture de la connexion\n", client->id);
+        printf("[INFO - CLIENT %d] Fermeture de la connexion\n", client->id);
         // Fermeture de la socket
         close(client->socket);
         return;
@@ -178,7 +179,7 @@ void manageCommands(struct Client *client, char *buffer)
     else if (strncmp(command, "seeplaces", strlen("seeplaces")) == 0)
     {
         sprintf(response, "%d", NB_MAX_SALLE - salle.nbNonLibres);
-        printf("[INFO - Client %d] > %s\n", client->id, response);
+        printf("[INFO - CLIENT %d] Consultation des places dispos (Réponse: %s)\n", client->id, response);
     }
     else if (strncmp(command, "seetakenplaces", strlen("seetakenplaces")) == 0)
     {
@@ -193,9 +194,9 @@ void manageCommands(struct Client *client, char *buffer)
         }
 
         int len = strlen(places);
-        response = malloc(len * sizeof(char));
+        response = malloc(len * sizeof(char) + 2);
         strcpy(response, places);
-        printf("[INFO - Client %d] takenplaces: %s | %s\n", client->id, places, response);
+        printf("[INFO - CLIENT %d] Consultation des places prises (Réponse: %s)\n", client->id, response);
         free(places);
     }
     else if (strncmp(command, "newplace", strlen("newplace")) == 0)
@@ -212,8 +213,8 @@ void manageCommands(struct Client *client, char *buffer)
             index = atoi(chosenPlace);
             if (salle.places[index].noDoss != NULL)
             {
-                strcpy(response, "place taken");
-                printf("[ERRO - Client %d] place is already taken\n", client->id);
+                strcpy(response, "taken");
+                printf("[ERRO - CLIENT %d] Demande une place... La place %d est déjà prise\n", client->id, index);
                 isPlaceError = 1;
             }
             else
@@ -263,27 +264,26 @@ void manageCommands(struct Client *client, char *buffer)
                     place.noDoss = malloc(len * sizeof(char));
                     strcpy(place.noDoss, noDoss);
 
-                    printf("[INFO - Client %d] > %s - %s - %s - %d \n", client->id, name, fname, noDoss, index);
-
                     if (index == -1)
                     {
                         index = salle.nbNonLibres;
                     }
                     salle.places[index] = place;
                     salle.nbNonLibres++;
+                    printf("[INFO - CLIENT %d] %s %s crée le dossier %s à la place %d\n", client->id, name, fname, noDoss, index);
 
                     strcpy(response, noDoss);
                 }
                 else
                 {
-                    strcpy(response, "fname null");
-                    printf("[ERRO - Client %d] fName is null\n", client->id);
+                    strcpy(response, "fname");
+                    printf("[ERRO - CLIENT %d] Le fName donné est null\n", client->id);
                 }
             }
             else
             {
-                strcpy(response, "name null");
-                printf("[ERRO - Client %d] Name is null\n", client->id);
+                strcpy(response, "name");
+                printf("[ERRO - CLIENT %d] Le name donné est null\n", client->id);
             }
         }
     }
@@ -294,39 +294,55 @@ void manageCommands(struct Client *client, char *buffer)
 
         int index = -1;
 
-        for (int i = 0; i < NB_MAX_SALLE; i++)
+        if (name != NULL)
         {
-            if (salle.places[i].noDoss != NULL)
+            if (noDoss != NULL)
             {
-                if (strcmp(salle.places[i].noDoss, noDoss) == 0 && strcmp(salle.places[i].nom, name) == 0)
+                for (int i = 0; i < NB_MAX_SALLE; i++)
                 {
-                    index = i;
-                    break;
+                    if (salle.places[i].noDoss != NULL)
+                    {
+                        if (strcmp(salle.places[i].noDoss, noDoss) == 0 && strcmp(salle.places[i].nom, name) == 0)
+                        {
+                            index = i;
+                            break;
+                        }
+                    }
+                }
+
+                if (index > -1)
+                {
+                    int len = strlen("ok");
+                    response = malloc(len * sizeof(char) + 2);
+                    printf("[INFO - CLIENT %d] %s - %s supprimé\n", client->id, name, noDoss);
+                    strcpy(response, "ok");
+                    salle.nbNonLibres--;
+                }
+                else
+                {
+                    strcpy(response, "exist");
+                    printf("[ERRO - CLIENT %d] Le dossier n'existe pas\n", client->id);
                 }
             }
-        }
-
-        if (index > -1)
-        {
-            int len = strlen("ok");
-            response = malloc(len * sizeof(char) + 2);
-            printf("[INFO - Client %d] > %s - %s supprimé \n", client->id, name, noDoss);
-            strcpy(response, "ok");
-            salle.nbNonLibres--;
+            else
+            {
+                strcpy(response, "nodoss");
+                printf("[ERRO - CLIENT %d] Le noDoss donné est null\n", client->id);
+            }
         }
         else
         {
-            strcpy(response, "dont exist");
-            printf("[ERRO - Client %d] Client doesn't exist\n", client->id);
+            strcpy(response, "name");
+            printf("[ERRO - CLIENT %d] Le name donné est null\n", client->id);
         }
     }
     else
     {
         // On renvoie le texte au client dans un buffer assez grand
-        int len = strlen("Vous avez dit : ") + strlen(buffer) + 1;
+        int len = strlen("wat");
         response = malloc(len * sizeof(char) + 2);
-        strcpy(response, "Vous avez dit : ");
-        strcat(response, buffer);
+        strcpy(response, "wat");
+        printf("[ERRO - CLIENT %d] Commande non comprise\n", client->id);
     }
     // Un seul envoi permet de ne pas surcharger le réseau
     strcat(response, "\0");
@@ -340,18 +356,18 @@ int initServerSocket(struct sockaddr_in *adresse)
     int fdsocket = initSocket(adresse);
 
     // Attachement de la socket sur le port et l'adresse IP
-    printf("Attachement de la socket sur le port %i\n", PORT);
+    printf("[INFO - SERVER] Attachement de la socket sur le port %i\n", PORT);
     if (bind(fdsocket, (struct sockaddr *)adresse, sizeof(*adresse)) != 0)
     {
-        printf("Echéc d'attachement: %s\n", strerror(errno));
+        printf("[ERRO - SERVER] Echec d'attachement: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     // Passage en écoute de la socket
-    printf("Mise en écoute de la socket\n");
+    printf("[INFO - SERVER] Mise en écoute de la socket\n");
     if (listen(fdsocket, BACKLOG) != 0)
     {
-        printf("Echec de la mise en écoute: %s\n", strerror(errno));
+        printf("[ERRO - SERVER] Echec de la mise en écoute: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
@@ -375,7 +391,7 @@ int waitForClient(int *serverSocket)
         // Convertion de l'IP en texte
         char ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(clientAdresse.sin_addr), ip, INET_ADDRSTRLEN);
-        printf("Connexion de %s:%i\n", ip, clientAdresse.sin_port);
+        printf("[INFO - SERVER] Connexion de %s:%i\n", ip, clientAdresse.sin_port);
 
         // Paramètrage de la socket (mode non bloquant)
         int opt = 1;
