@@ -220,17 +220,20 @@ void manageCommands(struct Client *client, char *buffer)
 
         if (!isPlaceError)
         {
+            printf("1\n");
             if (name != NULL)
             {
                 int len = strlen(name);
                 place.nom = malloc(len * sizeof(char));
                 strcpy(place.nom, name);
+                printf("2\n");
 
                 if (fname != NULL)
                 {
                     len = strlen(fname);
                     place.prenom = malloc(len * sizeof(char));
                     strcpy(place.prenom, fname);
+                    printf("3\n");
 
                     int isAlreadySet = 0;
                     char noDoss[10];
@@ -245,33 +248,39 @@ void manageCommands(struct Client *client, char *buffer)
 
                         for (int i = 0; i < NB_MAX_SALLE; i++)
                         {
-                            if (salle.places[i].noDoss != NULL)
+                            if (salle.places[i].noDoss != NULL && strcmp(salle.places[i].noDoss, noDoss) == 0)
                             {
                                 isAlreadySet = 1;
                                 break;
                             }
                         }
                     } while (isAlreadySet);
+                    printf("4\n");
 
                     len = strlen(noDoss);
                     place.noDoss = malloc(len * sizeof(char));
                     strcpy(place.noDoss, noDoss);
+                    printf("5\n");
 
                     printf("[INFO - Client %d] > %s - %s - %s - %d \n", client->id, name, fname, noDoss, index);
 
                     salle.places[index] = place;
                     salle.nbNonLibres++;
+                    printf("6\n");
 
                     strcpy(response, noDoss);
+                    printf("7\n");
                 }
                 else
                 {
+                    printf("21\n");
                     strcpy(response, "fname null");
                     printf("[ERRO - Client %d] fName is null\n", client->id);
                 }
             }
             else
             {
+                printf("11\n");
                 strcpy(response, "name null");
                 printf("[ERRO - Client %d] Name is null\n", client->id);
             }
