@@ -201,7 +201,7 @@ void manageCommands(struct Client *client, char *buffer)
     else if (strncmp(command, "newplace", strlen("newplace")) == 0)
     {
         struct Place place;
-        int index = salle.nbNonLibres;
+        int index = -1;
         int isPlaceError = 0;
 
         char *name = strtok(NULL, "_");        // Get the first parameter
@@ -213,27 +213,30 @@ void manageCommands(struct Client *client, char *buffer)
             if (salle.places[index].noDoss != NULL)
             {
                 strcpy(response, "place taken");
-                printf("[ERRO - Client %d] place is aldreay taken\n", client->id);
+                printf("[ERRO - Client %d] place is already taken\n", client->id);
                 isPlaceError = 1;
+            }
+            else
+            {
+                int len = strlen("reserved");
+                salle.places[index].noDoss = malloc(len * sizeof(char));
+                strcpy(salle.places[index].noDoss, "reserved");
             }
         }
 
         if (!isPlaceError)
         {
-            printf("1\n");
             if (name != NULL)
             {
                 int len = strlen(name);
                 place.nom = malloc(len * sizeof(char));
                 strcpy(place.nom, name);
-                printf("2\n");
 
                 if (fname != NULL)
                 {
                     len = strlen(fname);
                     place.prenom = malloc(len * sizeof(char));
                     strcpy(place.prenom, fname);
-                    printf("3\n");
 
                     int isAlreadySet = 0;
                     char noDoss[10];
@@ -255,32 +258,30 @@ void manageCommands(struct Client *client, char *buffer)
                             }
                         }
                     } while (isAlreadySet);
-                    printf("4\n");
 
                     len = strlen(noDoss);
                     place.noDoss = malloc(len * sizeof(char));
                     strcpy(place.noDoss, noDoss);
-                    printf("5\n");
 
                     printf("[INFO - Client %d] > %s - %s - %s - %d \n", client->id, name, fname, noDoss, index);
 
+                    if (index == -1)
+                    {
+                        index = salle.nbNonLibres;
+                    }
                     salle.places[index] = place;
                     salle.nbNonLibres++;
-                    printf("6\n");
 
                     strcpy(response, noDoss);
-                    printf("7\n");
                 }
                 else
                 {
-                    printf("21\n");
                     strcpy(response, "fname null");
                     printf("[ERRO - Client %d] fName is null\n", client->id);
                 }
             }
             else
             {
-                printf("11\n");
                 strcpy(response, "name null");
                 printf("[ERRO - Client %d] Name is null\n", client->id);
             }
