@@ -16,6 +16,7 @@
 
 #include "../common/sockets.h"
 #include "../common/sleep.h"
+#include "../common/words.h"
 #include "client.h"
 
 void readMessage(char *tampon[])

@@ -11,8 +11,6 @@
 #define PORT 6000
 // Taille du tampon de lecture des messages
 #define BUFFER_LEN 200
-// Commande pour arrêter le socket
-#define EXIT_WORD "exit"
 
 int initSocket(struct sockaddr_in *);
 
