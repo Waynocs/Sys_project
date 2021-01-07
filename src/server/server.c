@@ -182,7 +182,21 @@ void manageCommands(struct Client *client, char *buffer)
     }
     else if (strncmp(command, "seetakenplaces", strlen("seetakenplaces")) == 0)
     {
-        //TODO: TODO
+        char *places = malloc(sizeof(char));
+        strcpy(places, "-");
+        for (int i = 0; i < NB_MAX_SALLE; i++)
+        {
+            if (salle.places[i].noDoss != NULL)
+            {
+                sprintf(places, "%s_%d", places, i);
+            }
+        }
+
+        int len = strlen(places);
+        response = malloc(len * sizeof(char));
+        strcpy(response, places);
+        printf("[INFO - Client %d] takenplaces: %s | %s\n", client->id, places, response);
+        free(places);
     }
     else if (strncmp(command, "newplace", strlen("newplace")) == 0)
     {
