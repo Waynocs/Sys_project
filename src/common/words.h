@@ -97,6 +97,10 @@
  * Commande pour arrêter le socket
 */
 #define EXIT_IN_WORD "exit"
+/*
+ * Réponse du serveur pour arrêter le socket
+*/
+#define EXIT_OUT_WORD "bye"
 
 int initSocket(struct sockaddr_in *);
 

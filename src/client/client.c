@@ -19,6 +19,11 @@
 #include "../common/words.h"
 #include "client.h"
 
+/*
+ * Lis l'entrée utilisateur et la copie dans un buffer
+ * 
+ * @param tampon Le buffer dans lequel copier l'entrée
+*/
 void readMessage(char *tampon[])
 {
     //printf("Saisir un message à envoyer :\n");
@@ -38,12 +43,20 @@ int main(int argc, char const *argv[])
 
     int isClosed;
     msleep(10);
-    while ((isClosed = manageServer(clientSocket)) == 0)
-    {
-        readMessage(buffer);
-        send(clientSocket, buffer, strlen(buffer), MSG_DONTWAIT);
-        msleep(10);
-    }
+    // Boucle d'éxécution
+    //while ((isClosed = manageServer(clientSocket)) == 0)
+    //{
+    //readMessage(buffer); //Lis l'entrée utilsateur
+    //send(clientSocket, buffer, strlen(buffer), MSG_DONTWAIT); //Envoi l'entrée utilisateur
+    manageServer(clientSocket);                                                       // Récupère la réponse du serveur et agis en conséquence. Ici on attend le ready
+    send(clientSocket, SEE_PLACES_IN_WORD, strlen(SEE_PLACES_IN_WORD), MSG_DONTWAIT); // Demande des places disponibles
+    msleep(10);                                                                       // Sleep 10ms
+    manageServer(clientSocket);                                                       // Récupère la réponse du serveur et agis en conséquence
+    msleep(1000);                                                                     // Sleep 1000ms = 1s
+    send(clientSocket, EXIT_IN_WORD, strlen(EXIT_IN_WORD), MSG_DONTWAIT);             // Arret du client
+    msleep(10);                                                                       // Sleep 10ms
+    manageServer(clientSocket);                                                       // Récupère la réponse du serveur et agis en conséquence. Ici on attend le bye
+    //}
 
     return EXIT_SUCCESS;
 }
@@ -93,7 +106,9 @@ int manageServer(int clientSocket)
     }
     else if (len > 0)
     {
+        // Clear la commande
         system("clear");
+        // Affiche la réponse
         printf("%s\n", buffer);
         memset(buffer, 0, sizeof(buffer));
     }

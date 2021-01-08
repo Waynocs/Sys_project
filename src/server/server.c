@@ -170,7 +170,7 @@ void manageCommands(struct Client *client, char *buffer)
     if (strncmp(buffer, EXIT_IN_WORD, strlen(EXIT_IN_WORD)) == 0)
     {
         // Le client veut se déconnecter
-        send(client->socket, "bye\0", strlen("bye\0"), 0);
+        send(client->socket, EXIT_OUT_WORD, strlen(EXIT_OUT_WORD), 0);
         // La socket est fermé ou le client veut quitter le serveur !
         printf("[INFO - CLIENT %d] Fermeture de la connexion\n", client->id);
         // Fermeture de la socket
