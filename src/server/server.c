@@ -339,7 +339,6 @@ void manageCommands(struct Client *client, char *buffer)
     }
     else
     {
-        // On renvoie le texte au client dans un buffer assez grand
         int len = strlen(NO_CMD_ERROR_OUT_WORD);
         response = malloc(len * sizeof(char) + 2);
         strcpy(response, NO_CMD_ERROR_OUT_WORD);
