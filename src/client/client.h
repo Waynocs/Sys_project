@@ -7,6 +7,9 @@
 #ifndef DEF_CLIENT_H
 #define DEF_CLIENT_H
 
+// Nombre de places dans la salle
+#define NB_MAX_SALLE 100
+
 void initAdresse(struct sockaddr_in *);
 int initClientSocket(struct sockaddr_in *);
 int manageServer(int);

@@ -259,7 +259,7 @@ void manageCommands(struct Client *client, char *buffer)
         {
             int isStringError = 0;
             // On vérifie si le paramètre est bien un entier
-            for (int i = 0; i < len(chosenPlace); i++)
+            for (int i = 0; i < strlen(chosenPlace); i++)
             {
                 if (chosenPlace[i] < 48 || chosenPlace[i] > 57)
                 {
