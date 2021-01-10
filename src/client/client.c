@@ -42,22 +42,68 @@ int main(int argc, char const *argv[])
     static char buffer[BUFFER_LEN + 1];
 
     int isClosed;
+    char *choice;
+    char *name;
+    char *surname;
+    char *folderNb;
+    char *response;
+
     msleep(10);
     // Boucle d'éxécution
-    //while ((isClosed = manageServer(clientSocket)) == 0)
-    //{
-    //readMessage(buffer); //Lis l'entrée utilsateur
-    //send(clientSocket, buffer, strlen(buffer), MSG_DONTWAIT); //Envoi l'entrée utilisateur
-    manageServer(clientSocket);                                                       // Récupère la réponse du serveur et agis en conséquence. Ici on attend le ready
-    send(clientSocket, SEE_PLACES_IN_WORD, strlen(SEE_PLACES_IN_WORD), MSG_DONTWAIT); // Demande des places disponibles
-    msleep(10);                                                                       // Sleep 10ms
-    manageServer(clientSocket);                                                       // Récupère la réponse du serveur et agis en conséquence
-    msleep(1000);                                                                     // Sleep 1000ms = 1s
-    send(clientSocket, EXIT_IN_WORD, strlen(EXIT_IN_WORD), MSG_DONTWAIT);             // Arret du client
-    msleep(10);                                                                       // Sleep 10ms
-    manageServer(clientSocket);                                                       // Récupère la réponse du serveur et agis en conséquence. Ici on attend le bye
-    //}
-
+    while ((isClosed = manageServer(clientSocket)) == 0)
+    {
+        printf("--1-- Voir les places disponibles\n--2-- voir les places réservées\n--3-- Réserver une place\n--4-- Annuler une réservation\n--5-- Exit\n");
+        readMessage(choice);
+        // On transforme le paramètre en entier
+        int index = atoi(choice);
+        switch (index)
+        {
+        case 1:
+            send(clientSocket, SEE_PLACES_IN_WORD, strlen(SEE_PLACES_IN_WORD), MSG_DONTWAIT);
+            manageServer(clientSocket);
+            break;
+        case 2:
+            send(clientSocket, SEE_TAKEN_PLACES_IN_WORD, strlen(SEE_TAKEN_PLACES_IN_WORD), MSG_DONTWAIT);
+            manageServer(clientSocket);
+            break;
+        case 3:
+            printf("Veuillez renseignez votre nom ainsi que votre prenom\n");
+            printf("Nom : ");
+            readMessage(name);
+            printf("Prenom : ");
+            readMessage(surname);
+            response = malloc(sizeof(char));
+            strcpy(response, NEW_PLACE_IN_WORD);
+            strcat(response, "_");
+            strcat(response, name);
+            strcat(response, "_");
+            strcat(response, surname);
+            send(clientSocket, response, strlen(response), MSG_DONTWAIT);
+            free(response);
+            manageServer(clientSocket);
+            break;
+        case 4:
+            printf("Veuillez renseigner votre nom ainsi que votre numero de dossier : \n");
+            printf("Nom : ");
+            readMessage(name);
+            printf("Numero de dossier : ");
+            readMessage(folderNb);
+            response = malloc(sizeof(char));
+            strcpy(response, CANCEL_IN_WORD);
+            strcat(response, "_");
+            strcat(response, name);
+            strcat(response, "_");
+            strcat(response, folderNb);
+            send(clientSocket, response, strlen(response), MSG_DONTWAIT);
+            free(response);
+            manageServer(clientSocket);
+            break;
+        case 5:
+            send(clientSocket, EXIT_IN_WORD, strlen(EXIT_IN_WORD), MSG_DONTWAIT);
+            break;
+        }
+        msleep(10);
+    }
     return EXIT_SUCCESS;
 }
 
