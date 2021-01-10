@@ -98,8 +98,18 @@ int main(int argc, char const *argv[])
 
                 if (placeNb[0] != '\n')
                 {
-                    strcat(response, "_");
-                    strcat(response, placeNb);
+                    for (int i = 0; i < strlen(placeNb); i++)
+                    {
+                        if (placeNb[i] < 48 || placeNb[i] > 57)
+                        {
+                            isStringError = 1;
+                            break;
+                        }
+                    }
+                    if (!isStringError)
+                    {
+                        sprintf(response, "%s_%d", response, atoi(placeNb) - 1);
+                    }
                 }
                 send(clientSocket, response, strlen(response), MSG_DONTWAIT);
                 free(response);
