@@ -16,7 +16,6 @@
 
 #include "sockets.h"
 
-// Paramétrage de la socket
 int initSocket(struct sockaddr_in *adresse)
 {
     // Descripteur de socket
@@ -25,7 +24,7 @@ int initSocket(struct sockaddr_in *adresse)
     int opt = 1;
 
     // Création de la socket en TCP
-    printf("Création de la socket\n");
+    printf("[INFO] Création de la socket\n");
     if ((fdsocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
     {
         printf("Echéc de la création: %s\n", strerror(errno));
@@ -33,7 +32,7 @@ int initSocket(struct sockaddr_in *adresse)
     }
 
     // Paramètrage de la socket
-    printf("Paramètrage de la socket\n");
+    printf("[INFO] Paramètrage de la socket\n");
     if (setsockopt(fdsocket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) != 0)
     {
         printf("Echéc de paramètrage: %s\n", strerror(errno));

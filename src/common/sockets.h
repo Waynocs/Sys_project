@@ -12,6 +12,13 @@
 // Taille du tampon de lecture des messages
 #define BUFFER_LEN 200
 
-int initSocket(struct sockaddr_in *);
+/*
+ * Crée un socket
+ * 
+ * @param a L'adresse du socket
+ * 
+ * @return Le socket
+*/
+int initSocket(struct sockaddr_in *a);
 
 #endif //DEF_SOCKET_H

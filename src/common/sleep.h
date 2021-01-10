@@ -7,6 +7,12 @@
 #ifndef DEF_SLEEP_H
 #define DEF_SLEEP_H
 
-int msleep(long);
+/* 
+ * Sleep for the requested number of milliseconds. 
+ * Source: https://stackoverflow.com/a/1157217
+ * 
+ * @param m Number of milliseconds
+ */
+int msleep(long m);
 
 #endif //DEF_SLEEP_H

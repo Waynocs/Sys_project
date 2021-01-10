@@ -9,9 +9,6 @@
 
 #include "sleep.h"
 
-/** Sleep for the requested number of milliseconds.
- * Source: https://stackoverflow.com/a/1157217
- */
 int msleep(long msec)
 {
     struct timespec ts;
