@@ -54,53 +54,66 @@ int main(int argc, char const *argv[])
     {
         printf("--1-- Voir les places disponibles\n--2-- voir les places réservées\n--3-- Réserver une place\n--4-- Annuler une réservation\n--5-- Exit\n");
         readMessage(choice);
-        // On transforme le paramètre en entier
-        int index = atoi(choice);
-        switch (index)
+        int isStringError = 0;
+        // On vérifie si le paramètre est bien un entier
+        for (int i = 0; i < len(choice); i++)
         {
-        case 1:
-            send(clientSocket, SEE_PLACES_IN_WORD, strlen(SEE_PLACES_IN_WORD), MSG_DONTWAIT);
-            manageServer(clientSocket);
-            break;
-        case 2:
-            send(clientSocket, SEE_TAKEN_PLACES_IN_WORD, strlen(SEE_TAKEN_PLACES_IN_WORD), MSG_DONTWAIT);
-            manageServer(clientSocket);
-            break;
-        case 3:
-            printf("Veuillez renseignez votre nom ainsi que votre prenom\n");
-            printf("Nom : ");
-            readMessage(name);
-            printf("Prenom : ");
-            readMessage(surname);
-            response = malloc(sizeof(char));
-            strcpy(response, NEW_PLACE_IN_WORD);
-            strcat(response, "_");
-            strcat(response, name);
-            strcat(response, "_");
-            strcat(response, surname);
-            send(clientSocket, response, strlen(response), MSG_DONTWAIT);
-            free(response);
-            manageServer(clientSocket);
-            break;
-        case 4:
-            printf("Veuillez renseigner votre nom ainsi que votre numero de dossier : \n");
-            printf("Nom : ");
-            readMessage(name);
-            printf("Numero de dossier : ");
-            readMessage(folderNb);
-            response = malloc(sizeof(char));
-            strcpy(response, CANCEL_IN_WORD);
-            strcat(response, "_");
-            strcat(response, name);
-            strcat(response, "_");
-            strcat(response, folderNb);
-            send(clientSocket, response, strlen(response), MSG_DONTWAIT);
-            free(response);
-            manageServer(clientSocket);
-            break;
-        case 5:
-            send(clientSocket, EXIT_IN_WORD, strlen(EXIT_IN_WORD), MSG_DONTWAIT);
-            break;
+            if (choice[i] < 48 || choice[i] > 57)
+            {
+                isStringError = 1;
+                break;
+            }
+        }
+        if (!isStringError)
+        {
+            // On transforme le paramètre en entier
+            int index = atoi(choice);
+            switch (index)
+            {
+            case 1:
+                send(clientSocket, SEE_PLACES_IN_WORD, strlen(SEE_PLACES_IN_WORD), MSG_DONTWAIT);
+                manageServer(clientSocket);
+                break;
+            case 2:
+                send(clientSocket, SEE_TAKEN_PLACES_IN_WORD, strlen(SEE_TAKEN_PLACES_IN_WORD), MSG_DONTWAIT);
+                manageServer(clientSocket);
+                break;
+            case 3:
+                printf("Veuillez renseignez votre nom ainsi que votre prenom\n");
+                printf("Nom : ");
+                readMessage(name);
+                printf("Prenom : ");
+                readMessage(surname);
+                response = malloc(sizeof(char));
+                strcpy(response, NEW_PLACE_IN_WORD);
+                strcat(response, "_");
+                strcat(response, name);
+                strcat(response, "_");
+                strcat(response, surname);
+                send(clientSocket, response, strlen(response), MSG_DONTWAIT);
+                free(response);
+                manageServer(clientSocket);
+                break;
+            case 4:
+                printf("Veuillez renseigner votre nom ainsi que votre numero de dossier : \n");
+                printf("Nom : ");
+                readMessage(name);
+                printf("Numero de dossier : ");
+                readMessage(folderNb);
+                response = malloc(sizeof(char));
+                strcpy(response, CANCEL_IN_WORD);
+                strcat(response, "_");
+                strcat(response, name);
+                strcat(response, "_");
+                strcat(response, folderNb);
+                send(clientSocket, response, strlen(response), MSG_DONTWAIT);
+                free(response);
+                manageServer(clientSocket);
+                break;
+            case 5:
+                send(clientSocket, EXIT_IN_WORD, strlen(EXIT_IN_WORD), MSG_DONTWAIT);
+                break;
+            }
         }
         msleep(10);
     }

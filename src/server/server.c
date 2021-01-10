@@ -257,10 +257,25 @@ void manageCommands(struct Client *client, char *buffer)
         // Si la place choisie n'est pas nulle
         if (chosenPlace != NULL)
         {
-            // On transforme le paramètre en entier
-            index = atoi(chosenPlace);
+            int isStringError = 0;
+            // On vérifie si le paramètre est bien un entier
+            for (int i = 0; i < len(chosenPlace); i++)
+            {
+                if (chosenPlace[i] < 48 || chosenPlace[i] > 57)
+                {
+                    isStringError = 1;
+                    break;
+                }
+            }
+
+            if (!isStringError)
+            {
+                // On transforme le paramètre en entier
+                index = atoi(chosenPlace);
+            }
+
             // Si la place est reservée
-            if (salle.places[index].noDoss != NULL)
+            if (salle.places[index].noDoss != NULL || isStringError)
             {
                 strcpy(response, TAKEN_ERROR_OUT_WORD);
                 printf("[ERROR - CLIENT %d] Demande une place... La place %d est déjà prise\n", client->id, index);
