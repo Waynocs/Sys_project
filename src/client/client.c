@@ -266,7 +266,6 @@ int manageServer(int clientSocket)
                 }
             }
 
-            printf("\n");
             free(takenPlaces);
         }
         printf("\n");

@@ -400,9 +400,9 @@ void manageCommands(struct Client *client, char *buffer)
                 if (index > -1)
                 {
                     // On libère la place
-                    free(salle.places[index].nom);
-                    free(salle.places[index].prenom);
-                    free(salle.places[index].noDoss);
+                    salle.places[index].nom = NULL;
+                    salle.places[index].prenom = NULL;
+                    salle.places[index].noDoss = NULL;
                     // On envoie le message comme quoi tout c'est bien passé
                     int len = strlen(SUCCESS_OUT_WORD);
                     response = malloc(len * sizeof(char) + 2);
