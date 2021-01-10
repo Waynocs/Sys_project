@@ -54,7 +54,15 @@ int main(int argc, char const *argv[])
     // Boucle d'éxécution
     while ((isClosed = manageServer(clientSocket)) == 0)
     {
-        printf("--1-- Voir les places disponibles\n--2-- liste des places\n--3-- Réserver une place\n--4-- Annuler une réservation\n--5-- Exit\n");
+        printf("[1] 🎟️   Voir le nombre de places disponibles\n");
+        printf("\n");
+        printf("[2] 📄 Liste des places\n");
+        printf("\n");
+        printf("[3] 🔐 Réserver une place\n");
+        printf("\n");
+        printf("[4] ❌ Annuler une réservation\n");
+        printf("\n");
+        printf("[5] 🚪 Exit\n");
         readMessage(choice);
         int isStringError = 0;
         // On vérifie si le paramètre est bien un entier
