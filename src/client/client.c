@@ -228,12 +228,11 @@ int manageServer(int clientSocket)
         else if (buffer[0] == '-')
         {
             printf("Liste des places :\n");
-            int *takenPlaces = calloc(0, NB_MAX_SALLE * sizeof(int));
+            int *takenPlaces = calloc(NB_MAX_SALLE, sizeof(int));
             char *prefix = strtok(buffer, "_");
             for (int i = 0; i < NB_MAX_SALLE; i++)
             {
                 char *place = strtok(NULL, "_");
-                printf("-> %s", place);
                 if (place == NULL)
                 {
                     break;
@@ -249,7 +248,11 @@ int manageServer(int clientSocket)
                 }
                 else
                 {
-                    printf("%d ", i + 1);
+                    printf("%3d ", i + 1);
+                }
+                if ((i + 1) % 10 == 0)
+                {
+                    printf("\n");
                 }
             }
 
