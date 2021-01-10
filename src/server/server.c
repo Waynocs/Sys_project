@@ -20,50 +20,62 @@
 #include "../common/words.h"
 #include "server.h"
 
+// La salle de concert
 struct Salle salle;
+// Les clients connectés, utilisé pour les threads
 struct Client clients[NB_CLIENTS];
+// Variable coupant tout les threads si mit à 0
 int isRunning = 1;
 
+// Evite une fuite de mémoire en cas de coupure du serveur
 void exitHandler(int dummy)
 {
     //TODO: double free or corruption (!prev)
+    // On coupe tout les threads
     isRunning = 0;
+    // Pour toute les places de la salle...
     for (int i = 0; i < NB_MAX_SALLE; i++)
     {
+        // Si elle possède un numéro de dossier (donc qu'elle a été reservée)
         if (salle.places[i].noDoss != NULL)
         {
+            // On libére la mémoire
             free(salle.places[i].nom);
             free(salle.places[i].prenom);
             free(salle.places[i].noDoss);
         }
     }
 
+    // On libère toute les places
     free(salle.places);
 }
 
 int main(void)
 {
+    // Initialise l'aléatoire
     srand((unsigned int)time(NULL));
 
+    // On initialise le tableau de client
     for (int i = 0; i < NB_MAX_SALLE; i++)
     {
         clients[i].id = -1;
         clients[i].socket = -1;
     }
 
+    // On initialise les places de la salle
     salle.places = malloc(NB_MAX_SALLE * sizeof(struct Place));
     salle.nbNonLibres = 0;
-    // Avoid memory leaks
+
+    // Si le serveur est arrété, on évite les fuites de mémoire
     signal(SIGINT, exitHandler);
 
-    // Structure contenant l'adresse
     struct sockaddr_in adresse;
-    // Initialisation de l'adresse
+    // Initialisation de l'adresse serveur
     adresse.sin_family = AF_INET;
     adresse.sin_addr.s_addr = IP;
     adresse.sin_port = htons(PORT);
 
-    // Descripteur de la socket du serveur
+    // On initialise le socket du serveur
     int serverSocket = initServerSocket(&adresse);
 
     int clientSocket;
@@ -76,6 +88,7 @@ int main(void)
             printf("[INFO - SERVER] Attribution de l'identifiant\n");
             for (int i = 0; i < NB_CLIENTS; i++)
             {
+                // Si la place i est disponible
                 if (clients[i].id == -1)
                 {
                     // On créé un nouveau client
@@ -91,6 +104,7 @@ int main(void)
                         printf("[ERROR - CLIENT %d] Error thread\n", clients[i].id);
                     }
 
+                    // Il y avait une place libre
                     isEmptyPlace = 1;
                     break;
                 }
@@ -101,23 +115,28 @@ int main(void)
             }
         }
     }
+
     return EXIT_SUCCESS;
 }
 
 int clientMain(struct Client *client)
 {
     printf("[INFO - CLIENT %d] Création du thread\n", client->id);
+    // On envoie au client qu'on est pret à recevoir des commandes
     send(client->socket, READY_OUT_WORD, strlen(READY_OUT_WORD), MSG_DONTWAIT);
 
     int isClosed = 0;
-
+    // Tant que les threads sont autorisé et que la connexion n'est pas fermée
     while (isRunning && !isClosed)
     {
+        // On traite le message du client
         isClosed = manageClient(client);
     }
 
     printf("[INFO - CLIENT %d] Fin du thread\n", client->id);
+    // On libère la place
     clients[client->id].id = -1;
+
     return thrd_success;
 }
 
@@ -127,27 +146,31 @@ int manageClient(struct Client *client)
     // Création d'un tampon pour stocker les messages des clients dans la heap
     static char buffer[BUFFER_LEN + 1];
 
-    // On récupère l'état de la socket
+    // On récupère le message venant du client
     int len = recv(client->socket, buffer, BUFFER_LEN, MSG_DONTWAIT);
 
     // Booléen pour suivre l'état de la socket
     int isClosed = 0;
+    // Si la réponse n'existe pas
     if (len == -1 && errno != EAGAIN)
     {
         // Une erreur est survenue
         printf("[ERROR - CLIENT %d] Errno {%i} : %s\n", client->id, errno, strerror(errno));
         isClosed = 1;
     }
+    // Si ma réponse est nulle
     else if (len == 0)
     {
         // Le client s'est déconnecté (extrémité de la socket fermée)
         isClosed = 1;
     }
+    // Si la réponse existe
     else if (len > 0)
     {
         // Ajout du terminateur de chaîne
         buffer[len] = '\0';
         printf("[INFO - CLIENT %d] Commande : %s\n", client->id, buffer);
+        // On gére le comportement en fonction de la commande
         manageCommands(client, buffer);
     }
 
@@ -164,9 +187,12 @@ int manageClient(struct Client *client)
 
 void manageCommands(struct Client *client, char *buffer)
 {
+    // On prépare la réponse du serveur
     char *response = malloc(sizeof(char));
+    // On récupère la commande sans paramètres
     char *command = strtok(buffer, "_");
 
+    // Si la commande correspont à EXIT_IN_WORD
     if (strncmp(buffer, EXIT_IN_WORD, strlen(EXIT_IN_WORD)) == 0)
     {
         // Le client veut se déconnecter
@@ -175,43 +201,65 @@ void manageCommands(struct Client *client, char *buffer)
         printf("[INFO - CLIENT %d] Fermeture de la connexion\n", client->id);
         // Fermeture de la socket
         close(client->socket);
+
+        // On passe la fin de la fonction
         return;
     }
+    // Si la commande correspont à SEE_PLACES_IN_WORD
     else if (strncmp(command, SEE_PLACES_IN_WORD, strlen(SEE_PLACES_IN_WORD)) == 0)
     {
+        // On met dans la réponse le nombre de places disponibles
         sprintf(response, "%d", NB_MAX_SALLE - salle.nbNonLibres);
         printf("[INFO - CLIENT %d] Consultation des places dispos (Réponse: %s)\n", client->id, response);
     }
+    // Si la commande correspont à SEE_TAKEN_PLACES_IN_WORD
     else if (strncmp(command, SEE_TAKEN_PLACES_IN_WORD, strlen(SEE_TAKEN_PLACES_IN_WORD)) == 0)
     {
+        // On prépare la liste des places
         char *places = malloc(sizeof(char));
+        // On fait attention à ce que la réponse ne soit pas vide
         strcpy(places, "-");
+        // Pour chaque place
         for (int i = 0; i < NB_MAX_SALLE; i++)
         {
+            // Si elle est reservée
             if (salle.places[i].noDoss != NULL)
             {
+                // On rajoutte à la liste l'id de la place
                 sprintf(places, "%s_%d", places, i);
             }
         }
 
+        // On copie la liste dans la réponse
         int len = strlen(places);
         response = malloc(len * sizeof(char) + 2);
         strcpy(response, places);
+
         printf("[INFO - CLIENT %d] Consultation des places prises (Réponse: %s)\n", client->id, response);
+
+        // On évite une fuite de mémoire
         free(places);
     }
+    // Si la commande correspont à NEW_PLACE_IN_WORD
     else if (strncmp(command, NEW_PLACE_IN_WORD, strlen(NEW_PLACE_IN_WORD)) == 0)
     {
         struct Place place;
         int index = -1;
         int isPlaceError = 0;
 
-        char *name = strtok(NULL, "_");        // Get the first parameter
-        char *fname = strtok(NULL, "_");       // Get the second parameter
-        char *chosenPlace = strtok(NULL, "_"); // Get the third parameter
+        // On récupère le premier paramètre (le nom)
+        char *name = strtok(NULL, "_");
+        // On récupère le deuxième paramètre (le prénom)
+        char *fname = strtok(NULL, "_");
+        // On récupère le troisière paramètre (la place choisie)
+        char *chosenPlace = strtok(NULL, "_");
+
+        // Si la place choisie n'est pas nulle
         if (chosenPlace != NULL)
         {
+            // On transforme le paramètre en entier
             index = atoi(chosenPlace);
+            // Si la place est reservée
             if (salle.places[index].noDoss != NULL)
             {
                 strcpy(response, TAKEN_ERROR_OUT_WORD);
@@ -220,22 +268,28 @@ void manageCommands(struct Client *client, char *buffer)
             }
             else
             {
+                // Sinon on bloque la place
                 int len = strlen("reserved");
                 salle.places[index].noDoss = malloc(len * sizeof(char));
                 strcpy(salle.places[index].noDoss, "reserved");
             }
         }
 
+        // Si la place n'est pas reservée
         if (!isPlaceError)
         {
+            //Si le nom existe
             if (name != NULL)
             {
+                // On met le nom dans la place
                 int len = strlen(name);
                 place.nom = malloc(len * sizeof(char));
                 strcpy(place.nom, name);
 
+                // Si le nom existe
                 if (fname != NULL)
                 {
+                    // On met le prénom dans la place
                     len = strlen(fname);
                     place.prenom = malloc(len * sizeof(char));
                     strcpy(place.prenom, fname);
@@ -245,12 +299,14 @@ void manageCommands(struct Client *client, char *buffer)
 
                     do
                     {
+                        // On génére un string à 10 chiffres
                         for (int i = 0; i < 10; i++)
                         {
                             noDoss[i] = (rand() % 10) + 48;
                         }
-                        noDoss[10] = '\0'; // set the end of the string
+                        noDoss[10] = '\0';
 
+                        // On vérifie que le numéro de dossier n'existe pas
                         for (int i = 0; i < NB_MAX_SALLE; i++)
                         {
                             if (salle.places[i].noDoss != NULL && strcmp(salle.places[i].noDoss, noDoss) == 0)
@@ -261,26 +317,33 @@ void manageCommands(struct Client *client, char *buffer)
                         }
                     } while (isAlreadySet);
 
+                    // On met le numéro de dossier dans la place
                     len = strlen(noDoss);
                     place.noDoss = malloc(len * sizeof(char));
                     strcpy(place.noDoss, noDoss);
 
+                    // Si la place n'a pas été choisie
                     if (index == -1)
                     {
+                        // On prend la dernière place disponible
                         index = salle.nbNonLibres;
                     }
+                    // On enregistre la place
                     salle.places[index] = place;
                     salle.nbNonLibres++;
                     printf("[INFO - CLIENT %d] %s %s crée le dossier %s à la place %d\n", client->id, name, fname, noDoss, index);
 
+                    // On copie le numéro de dossier dans la réponse
                     strcpy(response, noDoss);
                 }
+                // Si le prénom est null
                 else
                 {
                     strcpy(response, FNAME_ERROR_OUT_WORD);
                     printf("[ERROR - CLIENT %d] Le fName donné est null\n", client->id);
                 }
             }
+            // Si le nom est null
             else
             {
                 strcpy(response, NAME_ERROR_OUT_WORD);
@@ -288,21 +351,28 @@ void manageCommands(struct Client *client, char *buffer)
             }
         }
     }
+    // Si la commande correspont à CANCEL_IN_WORD
     else if (strncmp(command, CANCEL_IN_WORD, strlen(CANCEL_IN_WORD)) == 0)
     {
+        // On récupère le premier paramètre (le nom)
         char *name = strtok(NULL, "_");
+        // On récupère le premier paramètre (le numéro de dossier)
         char *noDoss = strtok(NULL, "_");
 
         int index = -1;
 
+        // Si le nom n'est pas null
         if (name != NULL)
         {
+            // Si le numéro de dossier n'est pas null
             if (noDoss != NULL)
             {
                 for (int i = 0; i < NB_MAX_SALLE; i++)
                 {
+                    // Si place n'est pas vide
                     if (salle.places[i].noDoss != NULL)
                     {
+                        // On vérifie que le numéro de dossier et nom correspond
                         if (strcmp(salle.places[i].noDoss, noDoss) == 0 && strcmp(salle.places[i].nom, name) == 0)
                         {
                             index = i;
@@ -311,12 +381,15 @@ void manageCommands(struct Client *client, char *buffer)
                     }
                 }
 
+                // Si une place a été trouvée
                 if (index > -1)
                 {
+                    // On envoie le message comme quoi tout c'est bien passé
                     int len = strlen(SUCCESS_OUT_WORD);
                     response = malloc(len * sizeof(char) + 2);
                     printf("[INFO - CLIENT %d] %s - %s supprimé\n", client->id, name, noDoss);
                     strcpy(response, SUCCESS_OUT_WORD);
+                    // On augment le nombre de place disponible
                     salle.nbNonLibres--;
                 }
                 else
@@ -325,20 +398,24 @@ void manageCommands(struct Client *client, char *buffer)
                     printf("[ERROR - CLIENT %d] Le dossier n'existe pas\n", client->id);
                 }
             }
+            // Si le numéro de dossier est null
             else
             {
                 strcpy(response, NODOSS_ERROR_OUT_WORD);
                 printf("[ERROR - CLIENT %d] Le noDoss donné est null\n", client->id);
             }
         }
+        // Si le nom est null
         else
         {
             strcpy(response, NAME_ERROR_OUT_WORD);
             printf("[ERROR - CLIENT %d] Le name donné est null\n", client->id);
         }
     }
+    // Si la commande est autre
     else
     {
+        // On revoie une erreeur
         int len = strlen(NO_CMD_ERROR_OUT_WORD);
         response = malloc(len * sizeof(char) + 2);
         strcpy(response, NO_CMD_ERROR_OUT_WORD);
@@ -347,6 +424,8 @@ void manageCommands(struct Client *client, char *buffer)
     // Un seul envoi permet de ne pas surcharger le réseau
     strcat(response, "\0");
     send(client->socket, response, strlen(response), 0);
+
+    // On évite les fuites de mémoire
     free(response);
 }
 
