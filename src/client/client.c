@@ -254,7 +254,7 @@ int manageServer(int clientSocket)
             {
                 if (takenPlaces[i])
                 {
-                    printf("X ");
+                    printf("%3c ", 'X');
                 }
                 else
                 {
