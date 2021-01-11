@@ -1,1 +1,13 @@
 # Sys_projet
+
+Simple projet scolaire permettant la communication entre un serveur et un / plusieurs client(s) pour la gestion d'une salle de concert.
+
+Grâce à celui-ci, vous pourrez :
+    [X] Avoir une salle de concert comportant 100 places
+    [X] Gérer plusieurs connexions en simultané 
+    [X] Consulter les places disponibles
+    [X] Reservation d'un billet en le bloquant et en y inscrivant son nom ainsi que son prenom
+    [X] Générer grâce au serveur un numero de dossier à 10 chiffres au moment de la reservation
+    [X] Consulter les places déjà réservées
+    [X] Annuler son billet en y indiquant son nom ainsi que son numero de dossier 
+    [X] Gérer au mieux les problèmes de concurrence 
