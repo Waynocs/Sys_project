@@ -257,6 +257,7 @@ int manageServer(int clientSocket)
         {
             printf(READY_OUT_WORD);
         }
+        // Si la réponse est un nombre
         else if (buffer[0] >= 48 && buffer[0] <= 57)
         {
             if (strlen(buffer) > 6) // Si la réponse est plutot longue, c'est un numéro de dossier
@@ -268,6 +269,7 @@ int manageServer(int clientSocket)
                 printf("Nombre de places disponibles: %s", buffer);
             }
         }
+        // Si la réponse est une liste, c'est la liste des places déjà prises
         else if (buffer[0] == '-')
         {
             printf("Liste des places :\n");
